@@ -1,15 +1,21 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { firestore } from '@/firebase'
+import { firestore, storage } from '@/firebase'
 import { Box, Modal, TextField, Typography, Stack, Button, AppBar, Toolbar, Container, InputAdornment, Grid, Card, CardContent, CardActions, IconButton } from '@mui/material'
 import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon } from '@mui/icons-material'
-import { collection, deleteDoc, doc, DocumentReference, Firestore, getDoc, getDocs, query, setDoc } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc } from 'firebase/firestore'
+import CameraCapture from './CameraCapture'
 
 export default function Home() {
     const [inventory, setInventory] = useState([])
     const [open, setOpen] = useState(false)
     const [itemName, setItemName] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
+    const [capturedImage, setCapturedImage] = useState(null)
+
+    const handleCapture = (imageDataUrl) => {
+        setCapturedImage(imageDataUrl)
+    }
 
     // update inventory
     const updateInventory = async () => {
@@ -27,7 +33,7 @@ export default function Home() {
     }
 
     const removeItem = async (item) => {
-        const docRef = doc(collection(firestore, 'inventory'), item)
+        const docRef = doc(firestore, 'inventory', item)
         const docSnap = await getDoc(docRef)
 
         if (docSnap.exists()) {
@@ -35,11 +41,9 @@ export default function Home() {
             if (quantity === 1) {
                 await deleteDoc(docRef)
             } else {
-                await setDoc(docRef, { quantity: quantity - 1 })
-
+                await setDoc(docRef, { quantity: quantity - 1 }, { merge: true })
             }
         }
-
         await updateInventory()
     }
 
@@ -49,17 +53,45 @@ export default function Home() {
 
 
     const addItem = async (item) => {
-        const docRef = doc(collection(firestore, 'inventory'), item)
-        const docSnap = await getDoc(docRef)
-
-        if (docSnap.exists()) {
-            const { quantity } = docSnap.data()
-            await setDoc(docRef, { quantity: quantity + 1 })
-        } else {
-            await setDoc(docRef, { quantity: 1 })
+        if (!item.trim()) {
+            console.error("Item name cannot be empty");
+            return;
         }
 
-        await updateInventory()
+        try {
+            const docRef = doc(collection(firestore, 'inventory'), item.trim())
+            console.log("Document reference created");
+            const docSnap = await getDoc(docRef)
+            console.log("Document snapshot retrieved");
+
+
+            let newData = {
+                quantity: 1
+            }
+            if (capturedImage) {
+                console.log("Captured image found, adding to newData");
+                newData.imageUrl = capturedImage
+            }
+
+            if (docSnap.exists()) {
+                console.log("Document exists, updating");
+                const existingData = docSnap.data()
+                await setDoc(docRef, {
+                    quantity: existingData.quantity + 1,
+                    imageUrl: capturedImage || existingData.imageUrl
+                }, { merge: true })
+            } else {
+                console.log("Document doesn't exist, creating new");
+                await setDoc(docRef, newData)
+            }
+
+            console.log("Document updated/created successfully");
+            await updateInventory()
+            setCapturedImage(null)
+            setItemName('')
+        } catch (e) {
+            console.error("Error adding item:", e)
+        }
     }
 
     const handleOpen = () => setOpen(true)
@@ -92,21 +124,32 @@ export default function Home() {
                     }}>
 
                     <Typography variant="h6" component='h2' sx={{ mb: 2 }}>Add New Item</Typography>
-                    <TextField 
+                    <TextField
                         autoFocus
                         margin='dense'
                         label="Item Name"
-                        fullWidth 
-                        variant="outlined" 
-                        value={itemName} onChange={(e) => {setItemName(e.target.value)}}
+                        fullWidth
+                        variant="outlined"
+                        value={itemName} onChange={(e) => { setItemName(e.target.value) }}
                     />
-                    <Button variant="outlined" 
-                        sx={{mt:2}}
+                    <CameraCapture onCapture={handleCapture} />
+                    {capturedImage && (
+                        <Box sx={{ mt: 2 }}>
+                            <img src={capturedImage} alt="Captured item" style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', marginTop: '10px' }} />
+                        </Box>
+                    )}
+
+                    <Button variant="contained"
+                        fullWidth
+                        sx={{ mt: 2 }}
                         onClick={() => {
-                        addItem(itemName)
-                        setItemName('')
-                        handleClose()
-                    }}>Add Item</Button>
+                            console.log("Add Item button clicked");
+                            console.log("Item Name:", itemName);
+                            console.log("Captured Image:", capturedImage ? "Image captured" : "No image")
+                            addItem(itemName)
+                            setItemName('')
+                            handleClose()
+                        }}>Add Item</Button>
                 </Box>
             </Modal>
 
@@ -127,12 +170,15 @@ export default function Home() {
                     }}
                 />
                 <Grid container spacing={3}>
-                    {filteredInventory.map(({ name, quantity }) => (
+                    {filteredInventory.map(({ name, quantity, imageUrl }) => (
                         <Grid item xs={12} sm={6} md={4} key={name}>
                             <Card>
+                                {imageUrl && (
+                                    <img src={imageUrl} alt={name} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                                )}
                                 <CardContent>
                                     <Typography variant='h5' component='div'>{name.charAt(0).toUpperCase() + name.slice(1)}</Typography>
-                                    <Typography variant='h6' color='text.secondary'>Qauntity: {quantity}</Typography>
+                                    <Typography variant='h6' color='text.secondary'>Quantity: {quantity}</Typography>
                                 </CardContent>
                                 <CardActions>
                                     <IconButton onClick={() => { addItem(name) }} color="primary">
@@ -151,3 +197,4 @@ export default function Home() {
         </Box>
     )
 }
+
