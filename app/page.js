@@ -2,10 +2,11 @@
 import { classifyImage } from './imageClassification'
 import { useState, useEffect } from 'react'
 import { firestore, storage } from '@/firebase'
-import { Box, Modal, TextField, Typography, Stack, Button, AppBar, Toolbar, Container, InputAdornment, Grid, Card, CardContent, CardActions, IconButton } from '@mui/material'
+import { useMediaQuery, useTheme, CircularProgress, Box, Modal, TextField, Typography, Stack, Button, AppBar, Toolbar, Container, InputAdornment, Grid, Card, CardContent, CardActions, IconButton } from '@mui/material'
 import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon } from '@mui/icons-material'
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc } from 'firebase/firestore'
 import CameraCapture from './CameraCapture'
+import { resizeImage} from './imageUtils'
 
 export default function Home() {
     const [inventory, setInventory] = useState([])
@@ -13,6 +14,9 @@ export default function Home() {
     const [itemName, setItemName] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [capturedImage, setCapturedImage] = useState(null)
+    const [isLoading, setIsLoading] = useState(false);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const handleCapture = (imageDataUrl) => {
         setCapturedImage(imageDataUrl)
@@ -34,18 +38,25 @@ export default function Home() {
     }
 
     const removeItem = async (item) => {
-        const docRef = doc(firestore, 'inventory', item)
-        const docSnap = await getDoc(docRef)
+        setIsLoading(true)
+        try {
+            const docRef = doc(firestore, 'inventory', item)
+            const docSnap = await getDoc(docRef)
 
-        if (docSnap.exists()) {
-            const { quantity } = docSnap.data()
-            if (quantity === 1) {
-                await deleteDoc(docRef)
-            } else {
-                await setDoc(docRef, { quantity: quantity - 1 }, { merge: true })
+            if (docSnap.exists()) {
+                const { quantity } = docSnap.data()
+                if (quantity === 1) {
+                    await deleteDoc(docRef)
+                } else {
+                    await setDoc(docRef, { quantity: quantity - 1 }, { merge: true })
+                }
             }
+            await updateInventory()
+        } catch (error) {
+            console.error("Error removing item", error)
+        } finally {
+            setIsLoading(true)
         }
-        await updateInventory()
     }
 
     useEffect(() => {
@@ -59,23 +70,24 @@ export default function Home() {
             return;
         }
 
+        setIsLoading(true)
+
         try {
             const docRef = doc(collection(firestore, 'inventory'), item.trim())
-            console.log("Document reference created");
             const docSnap = await getDoc(docRef)
-            console.log("Document snapshot retrieved");
 
             let newData = {
                 quantity: 1
             }
             if (capturedImage) {
-                console.log("Captured image found, adding to newData");
-                newData.imageUrl = capturedImage
-                const classification = await classifyImage(capturedImage)
+                const resizedImage = await resizeImage(capturedImage, 800)
+                newData.imageUrl = resizedImage
+                const classification = await classifyImage(resizedImage)
                 if (classification) {
-                    newData.classificaton = classification;
-                    console.log("Image classified:", classification)
-                }
+                    const classificationObj = JSON.parse(classification);
+                    newData.description = classificationObj.description;
+                    newData.categories = classificationObj.categories;
+                    console.log("Image classified:", classificationObj)                }
             }
 
             if (docSnap.exists()) {
@@ -83,9 +95,10 @@ export default function Home() {
             const existingData = docSnap.data()
             await setDoc(docRef, {
                 quantity: existingData.quantity + 1,
-                imageUrl: capturedImage || existingData.imageUrl,
-                classification: newData.classification || existingData.classification
-            }, { merge: true })
+                imageUrl: newData.imageUrl || existingData.imageUrl,
+                description: newData.description || existingData.description,
+                categories: newData.categories || existingData.categories            
+                }, { merge: true })
         } else {
             console.log("Document doesn't exist, creating new");
             await setDoc(docRef, newData)
@@ -97,11 +110,17 @@ export default function Home() {
         setItemName('')
     } catch (e) {
         console.error("Error adding item:", e)
+    } finally {
+            setIsLoading(false)
     }
 }
 
 const handleOpen = () => setOpen(true)
-const handleClose = () => setOpen(false)
+const handleClose = () => {
+        setOpen(false)
+        setCapturedImage(null)
+        setItemName('')
+    }
 const filteredInventory = inventory.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
@@ -120,42 +139,52 @@ return (
         <Modal open={open} onClose={handleClose}>
             <Box
                 sx={{
-                    top: "50%", left: "50%",
+                    top: "50%", 
+                    left: "50%",
                     position: "absolute",
                     transform: 'translate(-50%, -50%)',
+                    maxHeight: '90vh',
                     width: 400,
                     bgcolor: 'background.paper',
                     boxShadow: 24,
-                    p: 4
+                    p: 4,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: isMobile ? '90%' : 600,
                 }}>
 
                 <Typography variant="h6" component='h2' sx={{ mb: 2 }}>Add New Item</Typography>
+                <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2 }}>
                 <TextField
                     autoFocus
                     margin='dense'
                     label="Item Name"
                     fullWidth
                     variant="outlined"
-                    value={itemName} onChange={(e) => { setItemName(e.target.value) }}
+                    value={itemName} 
+                    onChange={(e) => { setItemName(e.target.value) }}
                 />
+                 <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2 }}>
+                        <Box sx={{ flex: 1 }}>
                 <CameraCapture onCapture={handleCapture} />
+                </Box>
                 {capturedImage && (
                     <Box sx={{ mt: 2 }}>
                         <img src={capturedImage} alt="Captured item" style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', marginTop: '10px' }} />
                     </Box>
                 )}
-
-                <Button variant="contained"
-                    fullWidth
-                    sx={{ mt: 2 }}
-                    onClick={() => {
-                        console.log("Add Item button clicked");
-                        console.log("Item Name:", itemName);
-                        console.log("Captured Image captured No image")
-                            addItem(itemName)
-                            setItemName('')
-                            handleClose()
-                        }}>Add Item</Button>
+                </Box>
+                </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                        <Button 
+                            variant="contained"
+                            fullWidth
+                            disabled={isLoading || !itemName.trim()}
+                            onClick={() => {
+                                addItem(itemName)
+                            }}>{isLoading ? 'Adding...' : 'Add Item'}</Button>
+                        {isLoading && <CircularProgress size={24} sx={{ ml:2 }} />}
+                    </Box>
                 </Box>
         </Modal>
 
