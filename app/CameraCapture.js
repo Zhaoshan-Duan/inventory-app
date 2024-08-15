@@ -1,77 +1,54 @@
 'use client'
-import React, { useRef, useState } from 'react';
-import { CameraAlt as CameraIcon } from '@mui/icons-material';
+import React, { useRef, useState, useCallback} from 'react';
+import  CameraIcon  from '@mui/icons-material/Camera';
 import { Box, Button } from '@mui/material';
+import { Camera } from 'react-camera-pro';
 
 const CameraCapture = ({ onCapture }) => {
-    const videoRef = useRef(null)
-    const [stream, setStream] = useState(null)
-    const [error, setError] = useState(null)
+  const camera = useRef(null);
+  const [image, setImage] = useState(null);
+  const [isCameraOn, setIsCameraOn] = useState(false);
 
-    const startCamera = async () => {
-        try {
-            console.log("Attempting to start camera...");
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+  const startCamera = useCallback(() => {
+    setIsCameraOn(true);
+  }, []);
 
-            console.log("Camera stream obtained:", stream)
-            setStream(stream)
+  const stopCamera = useCallback(() => {
+    setIsCameraOn(false);
+    setImage(null);
+  }, []);
 
-            setTimeout(() => {
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream
-                    console.log("Video element source set");
-                } else {
-                    console.error("Video ref is null");
-                }
-            }, 100)
-
-        } catch (err) {
-            console.error("Error accessing the camera:", err);
-            setError(`Failed to access camera: ${err.message}`);
-        }
+  const captureImage = useCallback(() => {
+    if (camera.current) {
+      const photoData = camera.current.takePhoto();
+      setImage(photoData);
+      onCapture(photoData);
     }
+  }, [onCapture]);
 
-
-
-    const captureImage = () => {
-        if (videoRef.current) {
-            console.log("Attempting to capture image...");
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
-            const imageDataUrl = canvas.toDataURL('image/jpeg');
-            console.log("Image captured:", imageDataUrl.substring(0, 50) + "...");
-            onCapture(imageDataUrl);
-            stopCamera();
-        } else {
-            console.error("Video ref is null when trying to capture");
-        }
-    }
-
-    const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop())
-        }
-        setStream(null)
-    }
-
-    return (
+  return (
+ <Box sx={{ mt: 2 }}>
+      {!isCameraOn ? (
+        <Button variant="contained" onClick={startCamera}>
+          Start Camera
+        </Button>
+      ) : (
         <Box>
-            {!stream ? (
-                <Button startIcon={<CameraIcon />} onClick={startCamera}>
-                    Start Camera
-                </Button>
-            ) : (
-                <>
-                    <video ref={videoRef} autoPlay style={{ width: '100%', maxWidth: '500px' }} />
-                    <Button onClick={captureImage}>Capture</Button>
-                    <Button onClick={stopCamera}>Stop Camera</Button>
-                </>
-            )}
+          <Box sx={{ width: '100%', height: '300px', position: 'relative' }}>
+            <Camera ref={camera} />
+          </Box>
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+            <Button variant="contained" onClick={captureImage}>
+              Capture
+            </Button>
+            <Button variant="outlined" onClick={stopCamera}>
+              Stop Camera
+            </Button>
+          </Box>
         </Box>
-    );
-}
+      )}
+    </Box>
+  );
+};
 
 export default CameraCapture;
-
