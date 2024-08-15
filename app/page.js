@@ -64,56 +64,64 @@ export default function Home() {
     }, [])
 
 
-    const addItem = async (item) => {
+ const addItem = async (item, isExisting = false) => {
         if (!item.trim()) {
             console.error("Item name cannot be empty");
             return;
         }
 
-        setIsLoading(true)
+        setIsLoading(true);
 
         try {
-            const docRef = doc(collection(firestore, 'inventory'), item.trim())
-            const docSnap = await getDoc(docRef)
-
-            let newData = {
-                quantity: 1
-            }
-            if (capturedImage) {
-                const resizedImage = await resizeImage(capturedImage, 800)
-                newData.imageUrl = resizedImage
-                const classification = await classifyImage(resizedImage)
-                if (classification) {
-                    const classificationObj = JSON.parse(classification);
-                    newData.description = classificationObj.description;
-                    newData.categories = classificationObj.categories;
-                    console.log("Image classified:", classificationObj)                }
-            }
+            const docRef = doc(collection(firestore, 'inventory'), item.trim());
+            const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
-            console.log("Document exists, updating");
-            const existingData = docSnap.data()
-            await setDoc(docRef, {
-                quantity: existingData.quantity + 1,
-                imageUrl: newData.imageUrl || existingData.imageUrl,
-                description: newData.description || existingData.description,
-                categories: newData.categories || existingData.categories            
-                }, { merge: true })
-        } else {
-            console.log("Document doesn't exist, creating new");
-            await setDoc(docRef, newData)
-        }
+                console.log("Document exists, updating");
+                const existingData = docSnap.data();
+                const updatedData = {
+                    quantity: (existingData.quantity || 0) + 1,
+                };
 
-        console.log("Document updated/created successfully");
-        await updateInventory()
-        setCapturedImage(null)
-        setItemName('')
-    } catch (e) {
-        console.error("Error adding item:", e)
-    } finally {
-            setIsLoading(false)
-    }
-}
+                // Only include fields that are not undefined
+                if (existingData.imageUrl) updatedData.imageUrl = existingData.imageUrl;
+                if (existingData.description) updatedData.description = existingData.description;
+                if (existingData.categories) updatedData.categories = existingData.categories;
+
+                await setDoc(docRef, updatedData, { merge: true });
+            } else {
+                console.log("Document doesn't exist, creating new");
+                let newData = {
+                    quantity: 1
+                };
+
+                if (!isExisting && capturedImage) {
+                    const resizedImage = await resizeImage(capturedImage, 800);
+                    newData.imageUrl = resizedImage;
+                    const classification = await classifyImage(resizedImage);
+                    if (classification) {
+                        const classificationObj = JSON.parse(classification);
+                        newData.description = classificationObj.description;
+                        newData.categories = classificationObj.categories;
+                        console.log("Image classified:", classificationObj);
+                    }
+                }
+
+                await setDoc(docRef, newData);
+            }
+
+            console.log("Document updated/created successfully");
+            await updateInventory();
+            if (!isExisting) {
+                setCapturedImage(null);
+                setItemName('');
+            }
+        } catch (e) {
+            console.error("Error adding item:", e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
 const handleOpen = () => setOpen(true)
 const handleClose = () => {
@@ -121,6 +129,7 @@ const handleClose = () => {
         setCapturedImage(null)
         setItemName('')
     }
+
 const filteredInventory = inventory.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
@@ -216,7 +225,7 @@ return (
                                 <Typography variant='h6' color='text.secondary'>Quantity: {quantity}</Typography>
                             </CardContent>
                             <CardActions>
-                                <IconButton onClick={() => { addItem(name) }} color="primary">
+                                <IconButton onClick={() => { addItem(name, true) }} color="primary">
                                     <AddIcon />
                                 </IconButton>
                                 <IconButton onClick={() => { removeItem(name) }} color="secondary">

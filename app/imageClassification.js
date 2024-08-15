@@ -20,10 +20,18 @@ export const classifyImage = async (imageDataUrl) => {
                     },
                 ],
             })
-        return response.choices[0].message.content
-
+        const result = response.choices[0].message.content
+        return result
     } catch (e) {
         console.error("Error classifying image:", e);
-        return null;
-    }
+        if (e.response && e.response.status === 429) {
+            return JSON.stringify({
+                description: "Classification temporarily unavailable due to rate limiting.",
+                categories: ["Unclassified"]
+            });
+        }
+        return JSON.stringify({
+            description: "Failed to classify image.",
+            categories: ["Unclassified"]
+        });    }
 }

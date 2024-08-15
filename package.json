@@ -20,10 +20,15 @@
     "react": "^18",
     "react-camera-pro": "^1.4.0",
     "react-dom": "^18",
-    "styled-components": "^6.1.12"
+    "styled-components": "^5.3.11"
   },
   "devDependencies": {
     "eslint": "^8",
     "eslint-config-next": "14.2.5"
+  },
+         "browser": {
+    "fs": false,
+    "os": false,
+    "path": false
   }
 }
