@@ -1,6 +1,6 @@
 'use client'
 import { initializeApp } from "firebase/app";
-import {getFirestore, getFireStore} from "firebase/firestore"
+import {getFirestore } from "firebase/firestore"
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
