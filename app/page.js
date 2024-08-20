@@ -22,7 +22,7 @@ import {
     IconButton,
     Snackbar,
     Paper,
-    Alert
+    Alert,
 } from "@mui/material";
 import {
     Add as AddIcon,
@@ -100,8 +100,13 @@ export default function Home() {
             await updateInventory();
         } catch (error) {
             console.error("Error removing item", error);
+            setSnackbar({
+                open: true,
+                message: `Error removing item: ${error.message}`,
+                severity: "error",
+            });
         } finally {
-            setIsLoading(true);
+            setIsLoading(false);
         }
     };
 
@@ -140,11 +145,11 @@ export default function Home() {
                 if (existingData.imageUrl) updatedData.imageUrl = existingData.imageUrl;
 
                 /**
-                                                                        if (existingData.description)
-                                                                            updatedData.description = existingData.description;
-                                                                        if (existingData.categories)
-                                                                            updatedData.categories = existingData.categories;
-                                                                        */
+                                                                                        if (existingData.description)
+                                                                                            updatedData.description = existingData.description;
+                                                                                        if (existingData.categories)
+                                                                                            updatedData.categories = existingData.categories;
+                                                                                        */
 
                 await setDoc(docRef, updatedData, { merge: true });
             } else {
@@ -158,14 +163,14 @@ export default function Home() {
                     const resizedImage = await resizeImage(capturedImage, 800);
                     newData.imageUrl = resizedImage;
                     /**
-                                                                                          const classification = await classifyImage(resizedImage);
-                                                                                          if (classification) {
-                                                                                              const classificationObj = JSON.parse(classification);
-                                                                                              newData.description = classificationObj.description;
-                                                                                              newData.categories = classificationObj.categories;
-                                                                                              console.log("Image classified:", classificationObj);
-                                                                                          }
-                                                                                          */
+                                                                                                              const classification = await classifyImage(resizedImage);
+                                                                                                              if (classification) {
+                                                                                                                  const classificationObj = JSON.parse(classification);
+                                                                                                                  newData.description = classificationObj.description;
+                                                                                                                  newData.categories = classificationObj.categories;
+                                                                                                                  console.log("Image classified:", classificationObj);
+                                                                                                              }
+                                                                                                              */
                 }
 
                 await setDoc(docRef, newData);
@@ -173,7 +178,6 @@ export default function Home() {
 
             console.log("Document updated/created successfully");
             await updateInventory();
-            handleClose();
 
             setSnackbar({
                 open: true,
@@ -184,6 +188,7 @@ export default function Home() {
             if (!isExisting) {
                 setCapturedImage(null);
                 setItemName("");
+                handleClose();
             }
         } catch (e) {
             console.error("Error adding item:", e);
@@ -385,7 +390,7 @@ export default function Home() {
                                     width: "100%",
                                     maxHeight: "200px",
                                     objectFit: "contain",
-                                    borderRadius: '4px',
+                                    borderRadius: "4px",
                                 }}
                             />
                         </Box>
@@ -398,11 +403,15 @@ export default function Home() {
                             addItem(itemName);
                         }}
                         sx={{ mt: 2 }}
-                        startIcon={isLoading ? <CircularProgress size={24} color="inherit" /> : <AddIcon />}
+                        startIcon={
+                            isLoading ? (
+                                <CircularProgress size={24} color="inherit" />
+                            ) : (
+                                <AddIcon />
+                            )
+                        }
                     >
-                        {isLoading ? 'Add...'
-
-                            : "Add Item"}
+                        {isLoading ? "Add..." : "Add Item"}
                     </Button>
                 </Box>
             </Modal>
@@ -411,12 +420,12 @@ export default function Home() {
                 open={snackbar.open}
                 autoHideDuration={6000}
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
-              <Alert 
-                    onClose={() => setSnackbar({ ...snackbar, open: false })} 
-                    severity={snackbar.severity} 
-                    sx={{ width: '100%' }}
+                <Alert
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    severity={snackbar.severity}
+                    sx={{ width: "100%" }}
                 >
                     {snackbar.message}
                 </Alert>
