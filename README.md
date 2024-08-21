@@ -67,10 +67,6 @@ A modern, AI-enhanced inventory management system built with Next.js, Firebase, 
 - Search for items using the search bar.
 - Manage item quantities using the + and - buttons on each item card.
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

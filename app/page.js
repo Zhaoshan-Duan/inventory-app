@@ -1,7 +1,7 @@
 "use client";
 import { classifyImage } from "./imageClassification";
 import { useState, useEffect } from "react";
-import { firestore, storage } from "@/firebase";
+import { firestore } from "@/firebase";
 import {
     useMediaQuery,
     useTheme,
@@ -23,6 +23,13 @@ import {
     Snackbar,
     Paper,
     Alert,
+    Chip,
+    List,
+    ListItem,
+    ListItemText,
+    Collapse,
+    Fade,
+    styled,
 } from "@mui/material";
 import {
     Add as AddIcon,
@@ -30,6 +37,9 @@ import {
     Search as SearchIcon,
     Close as CloseIcon,
     Camera as CameraIcon,
+    ExpandLess as ExpandLessIcon,
+    ExpandMore as ExpandMoreIcon,
+    Info as InfoIcon,
 } from "@mui/icons-material";
 import {
     collection,
@@ -39,6 +49,7 @@ import {
     getDocs,
     query,
     setDoc,
+    updateDoc,
 } from "firebase/firestore";
 import CameraCapture from "./CameraCapture";
 import { resizeImage } from "./imageUtils";
@@ -57,12 +68,33 @@ export default function Home() {
         message: "",
         severity: "success",
     });
+    const [expandedItems, setExpandedItems] = useState({});
 
     const handleCapture = (imageDataUrl) => {
         setCapturedImage(imageDataUrl);
     };
 
-    // update inventory
+    const QuantityDisplay = styled(Box)(({ theme }) => ({
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
+        borderRadius: "50%",
+        width: 40,
+        height: 40,
+        fontWeight: "bold",
+        fontSize: "1.2rem",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+    }));
+
+    const toggleExpand = (name) => {
+        setExpandedItems((prev) => ({
+            ...prev,
+            [name]: !prev[name],
+        }));
+    };
+
     const updateInventory = async () => {
         try {
             console.log("Updating inventory...");
@@ -93,11 +125,19 @@ export default function Home() {
                 const { quantity } = docSnap.data();
                 if (quantity === 1) {
                     await deleteDoc(docRef);
+                    setInventory((prevInventory) =>
+                        prevInventory.filter((i) => i.name != item),
+                    );
                 } else {
-                    await setDoc(docRef, { quantity: quantity - 1 }, { merge: true });
+                    const newQuantity = quantity - 1;
+                    await setDoc(docRef, { quantity: newQuantity }, { merge: true });
+                    setInventory((prevInventory) =>
+                        prevInventory.map((i) =>
+                            i.name === item ? { ...i, quantity: newQuantity } : i,
+                        ),
+                    );
                 }
             }
-            await updateInventory();
         } catch (error) {
             console.error("Error removing item", error);
             setSnackbar({
@@ -108,6 +148,11 @@ export default function Home() {
         } finally {
             setIsLoading(false);
         }
+            setSnackbar({
+                open: true,
+                message: "Item removed successfully",
+                severity: "success",
+            });
     };
 
     useEffect(() => {
@@ -134,50 +179,65 @@ export default function Home() {
             console.log("Is existing:", isExisting);
             console.log("Captured image:", capturedImage ? "Yes" : "No");
 
+            let updatedData;
+
             if (docSnap.exists()) {
                 console.log("Document exists, updating");
                 const existingData = docSnap.data();
-                const updatedData = {
-                    quantity: (existingData.quantity || 0) + 1,
+                 const newQuantity = (existingData.quantity || 0) + 1;
+                updatedData = {
+                    ...existingData,
+                    quantity: newQuantity,
                 };
 
-                // Only include fields that are not undefined
-                if (existingData.imageUrl) updatedData.imageUrl = existingData.imageUrl;
-
-                /**
-                                                                                        if (existingData.description)
-                                                                                            updatedData.description = existingData.description;
-                                                                                        if (existingData.categories)
-                                                                                            updatedData.categories = existingData.categories;
-                                                                                        */
-
-                await setDoc(docRef, updatedData, { merge: true });
+                await setDoc(docRef, { quantity: newQuantity }, { merge: true });
             } else {
                 console.log("Document doesn't exist, creating new");
 
-                let newData = {
+                updatedData = {
                     quantity: 1,
+                    userEnteredName: item,
+                    name: item,
                 };
 
                 if (!isExisting && capturedImage) {
                     const resizedImage = await resizeImage(capturedImage, 800);
-                    newData.imageUrl = resizedImage;
-                    /**
-                                                                                                              const classification = await classifyImage(resizedImage);
-                                                                                                              if (classification) {
-                                                                                                                  const classificationObj = JSON.parse(classification);
-                                                                                                                  newData.description = classificationObj.description;
-                                                                                                                  newData.categories = classificationObj.categories;
-                                                                                                                  console.log("Image classified:", classificationObj);
-                                                                                                              }
-                                                                                                              */
+                    updatedData.imageUrl = resizedImage;
+
+                    console.log("Starting image classification...");
+                    const classification = await classifyImage(resizedImage);
+                    console.log("Image classified for", item, ":", classification);
+
+                    updatedData = {
+                        ...updatedData,
+                        suggestedName: classification.name,
+                        description: classification.description,
+                        categories: classification.categories,
+                        estimatedQuantity: classification.estimatedQuantity,
+                        /**
+                                    storageRecommendation: classification.storageRecommendation,
+                                    expirationEstimate: classification.expirationEstimate,
+                                    nutritionalInfo: classification.nutritionalInfo,
+                                    usageSuggestions: classification.usageSuggestions,
+                                    */
+                    };
                 }
 
-                await setDoc(docRef, newData);
+                await setDoc(docRef, updatedData);
             }
 
             console.log("Document updated/created successfully");
-            await updateInventory();
+
+            setInventory((prevInventory) => {
+                const index = prevInventory.findIndex((i) => i.name === item);
+                if (index != -1) {
+                    return prevInventory.map((i, idx) =>
+                        idx === index ? { ...i, ...updatedData } : i,
+                    );
+                } else {
+                    return [...prevInventory, { name: item, ...updatedData }];
+                }
+            });
 
             setSnackbar({
                 open: true,
@@ -213,24 +273,60 @@ export default function Home() {
         item.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
+    const acceptSuggestedName = async (item) => {
+        setIsLoading(true);
+        try {
+            const docRef = doc(collection(firestore, "inventory"), item.userEnteredName || item.name);
+            await updateDoc(docRef, {
+                name: item.suggestedName,
+                userEnteredName: item.suggestedName
+            });
+
+            setInventory((prevInventory) =>
+                prevInventory.map((i) =>
+                    i.name === (item.userEnteredName || item.name)
+                        ? { ...i, name: item.suggestedName, userEnteredName: item.suggestedName }
+                        : i
+                )
+            );
+
+            setSnackbar({
+                open: true,
+                message: "Item name updated successfully",
+                severity: "success",
+            });
+        } catch (error) {
+            console.error("Error updating item name:", error);
+            setSnackbar({
+                open: true,
+                message: `Error updating item name: ${error.message}`,
+                severity: "error",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: "#f0f4f8", minHeight: "100vh" }}>
-            <AppBar position="static" sx={{ bgcolor: "#3f51b5" }}>
+        <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
+            <AppBar position="static" sx={{ bgcolor: "#1976d2" }}>
                 <Toolbar>
                     <Typography
                         variant="h6"
                         component="div"
-                        sx={{ flexGrow: 1, fontWeight: "bold" }}
+                        sx={{ flexGrow: 1, fontWeight: "bold", letterSpacing: 1 }}
                     >
-                        Pantry Inventory
+                        🥘 Pantry Inventory
                     </Typography>
                     <Button
                         color="inherit"
                         onClick={handleOpen}
                         startIcon={<AddIcon />}
                         sx={{
-                            bgcolor: "rgba(255,255,255,0.1)",
-                            "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
+                            bgcolor: "rgba(255,255,255,0.2)",
+                            "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
+                            borderRadius: 2,
+                            px: 2,
                         }}
                     >
                         Add New Item
@@ -238,18 +334,26 @@ export default function Home() {
                 </Toolbar>
             </AppBar>
             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+                <Paper elevation={3} sx={{ p: 2, mb: 4, borderRadius: 2 }}>
                     <TextField
                         fullWidth
                         variant="outlined"
                         placeholder="Searching items..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        sx={{ mb: 4, bgcolor: "white" }}
+                        sx={{
+                            mb: 0,
+                            "& .MuiOutlinedInput-root": {
+                                borderRadius: 2,
+                                "&:hover fieldset": {
+                                    borderColor: "#1976d2",
+                                },
+                            },
+                        }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
-                                    <SearchIcon />
+                                    <SearchIcon color="action" />
                                 </InputAdornment>
                             ),
                         }}
@@ -257,163 +361,302 @@ export default function Home() {
                 </Paper>
 
                 <Grid container spacing={3}>
-                    {filteredInventory.map(({ name, quantity, imageUrl }) => (
-                        <Grid item xs={12} sm={6} md={4} key={name}>
-                            <Card
-                                sx={{
-                                    height: "100%",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    transition: "0.3s",
-                                    "&:hover": {
-                                        boxShadow: 6,
-                                        transform: "translateY(-5px)",
-                                    },
-                                }}
-                            >
-                                {imageUrl ? (
-                                    <Box
-                                        sx={{
-                                            height: 200,
-                                            backgroundImage: `url(${imageUrl})`,
-                                            backgroundSize: "cover",
-                                            backgroundPosition: "center",
-                                        }}
-                                    />
-                                ) : (
-                                    <Box
-                                        sx={{
-                                            height: 200,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            bgcolor: "#e0e0e0",
-                                        }}
-                                    >
-                                        <Typography variant="body2" color="text.secondary">
-                                            No image available
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                <CardContent sx={{ flexGrow: 1 }}>
-                                    <Typography variant="h5" component="div" gutterBottom>
-                                        {name.charAt(0).toUpperCase() + name.slice(1)}
-                                    </Typography>
-                                    <Typography variant="body1" color="text.secondary">
-                                        Quantity: {quantity}
-                                    </Typography>
-                                </CardContent>
-
-                                <CardActions
-                                    sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
+                    {filteredInventory.map((item) => (
+                        <Grid item xs={12} sm={6} md={4} key={item.name}>
+                            <Fade in={true} timeout={500}>
+                                <Card
+                                    sx={{
+                                        height: "100%",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        transition: "0.3s",
+                                        borderRadius: 2,
+                                        overflow: "hidden",
+                                        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                                        "&:hover": {
+                                            transform: "translateY(-5px)",
+                                            boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
+                                        },
+                                    }}
                                 >
-                                    <IconButton
-                                        onClick={() => {
-                                            addItem(name, true);
-                                        }}
-                                        color="primary"
-                                        aria-label="increase quantity"
+                                    {item.imageUrl ? (
+                                        <Box
+                                            sx={{
+                                                height: 200,
+                                                backgroundImage: `url(${item.imageUrl})`,
+                                                backgroundSize: "cover",
+                                                backgroundPosition: "center",
+                                            }}
+                                        />
+                                    ) : (
+                                        <Box
+                                            sx={{
+                                                height: 200,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                bgcolor: "#e0e0e0",
+                                            }}
+                                        >
+                                            <Typography variant="body2" color="text.secondary">
+                                                No image available
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                    <CardContent sx={{ flexGrow: 1, pt: 2 }}>
+                                        <Box
+                                            sx={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "flex-start",
+                                                mb: 2,
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="h5"
+                                                component="div"
+                                                gutterBottom
+                                                fontWeight="bold"
+                                            >
+                                                {item.userEnteredName || item.name}
+                                            </Typography>
+                                            <QuantityDisplay sx={{ mt: 2 }}>{item.quantity}</QuantityDisplay>
+                                        </Box>
+
+                                        {item.suggestedName &&
+                                            item.suggestedName !==
+                                            (item.userEnteredName || item.name) && (
+                                                <Box
+                                                    sx={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        mt: 1,
+                                                        mb:2,
+                                                    }}
+                                                >
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Suggested Item Name: {item.suggestedName}
+                                                    </Typography>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => acceptSuggestedName(item)}
+                                                        sx={{ ml: 2 }}
+                                                    >
+                                                        Use Suggested Name
+                                                    </Button>
+                                                </Box>
+                                            )}
+
+                                        {item.description && (
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ mt: 1, fontStyle: "italic" }}
+                                            >
+                                                {item.description}
+                                            </Typography>
+                                        )}
+
+                                        {item.categories && (
+                                            <Box
+                                                sx={{
+                                                    mt: 2,
+                                                    display: "flex",
+                                                    flexWrap: "wrap",
+                                                    gap: 0.5,
+                                                }}
+                                            >
+                                                {item.categories.map((category, index) => (
+                                                    <Chip
+                                                        key={index}
+                                                        label={category}
+                                                        size="small"
+                                                        sx={{ bgcolor: "#e3f2fd", color: "#1976d2" }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        )}
+
+                                        <Button
+                                            onClick={() => toggleExpand(item.name)}
+                                            startIcon={
+                                                expandedItems[item.name] ? (
+                                                    <ExpandLessIcon />
+                                                ) : (
+                                                    <ExpandMoreIcon />
+                                                )
+                                            }
+                                            sx={{ mt: 2, textTransform: "none" }}
+                                        >
+                                            {expandedItems[item.name] ? "Less Info" : "More Info"}
+                                        </Button>
+
+                                        <Collapse
+                                            in={expandedItems[item.name]}
+                                            timeout="auto"
+                                            unmountOnExit
+                                        >
+                                            <List dense>
+                                                {item.estimatedQuantity && (
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Estimated Quantity"
+                                                            secondary={item.estimatedQuantity}
+                                                        />
+                                                    </ListItem>
+                                                )}
+                                                {item.storageRecommendation && (
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Storage"
+                                                            secondary={item.storageRecommendation}
+                                                        />
+                                                    </ListItem>
+                                                )}
+                                                {item.expirationEstimate && (
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Expiration"
+                                                            secondary={item.expirationEstimate}
+                                                        />
+                                                    </ListItem>
+                                                )}
+                                                {item.nutritionalInfo &&
+                                                    item.nutritionalInfo.calories && (
+                                                        <ListItem>
+                                                            <ListItemText
+                                                                primary="Calories"
+                                                                secondary={item.nutritionalInfo.calories}
+                                                            />
+                                                        </ListItem>
+                                                    )}
+                                                {item.usageSuggestions &&
+                                                    item.usageSuggestions.length > 0 && (
+                                                        <ListItem>
+                                                            <ListItemText
+                                                                primary="Usage Suggestions"
+                                                                secondary={item.usageSuggestions.join(", ")}
+                                                            />
+                                                        </ListItem>
+                                                    )}
+                                            </List>
+                                        </Collapse>
+                                    </CardContent>
+
+                                    <CardActions
+                                        sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
                                     >
-                                        <AddIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        onClick={() => {
-                                            removeItem(name);
-                                        }}
-                                        color="seconday"
-                                        aria-label="decrease quantity"
-                                    >
-                                        <RemoveIcon />
-                                    </IconButton>
-                                </CardActions>
-                            </Card>
+                                        <IconButton
+                                            onClick={() => {
+                                                addItem(item.name, true);
+                                            }}
+                                            color="primary"
+                                            aria-label="increase quantity"
+                                        >
+                                            <AddIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            onClick={() => {
+                                                removeItem(item.name);
+                                            }}
+                                            color="seconday"
+                                            aria-label="decrease quantity"
+                                        >
+                                            <RemoveIcon />
+                                        </IconButton>
+                                    </CardActions>
+                                </Card>
+                            </Fade>
                         </Grid>
                     ))}
                 </Grid>
             </Container>
 
             <Modal open={open} onClose={handleClose}>
-                <Box
-                    sx={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: isMobile ? "90%" : 600,
-                        bgcolor: "background.paper",
-                        boxShadow: 24,
-                        p: 4,
-                        borderRadius: 2,
-                    }}
-                >
-                    <Typography
-                        variant="h6"
-                        component="h2"
-                        sx={{ mb: 2, fontWeight: "bold" }}
+                <Fade in={open}>
+                    <Box
+                        sx={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            width: isMobile ? "90%" : 400,
+                            bgcolor: "background.paper",
+                            boxShadow: 24,
+                            p: 4,
+                            borderRadius: 2,
+                        }}
                     >
-                        Add New Item
-                        <IconButton
-                            aria-label="close"
-                            onClick={handleClose}
-                            sx={{
-                                position: "absolute",
-                                right: 8,
-                                top: 8,
-                                color: (theme) => theme.palette.grey[500],
-                            }}
+                        <Typography
+                            variant="h6"
+                            component="h2"
+                            sx={{ mb: 2, fontWeight: "bold" }}
                         >
-                            <CloseIcon />
-                        </IconButton>
-                    </Typography>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Item Name"
-                        fullWidth
-                        variant="outlined"
-                        value={itemName}
-                        onChange={(e) => {
-                            setItemName(e.target.value);
-                        }}
-                        sx={{ mb: 2 }}
-                    />
-                    <Box sx={{ mb: 2 }}>
-                        <CameraCapture onCapture={handleCapture} />
-                    </Box>
-                    {capturedImage && (
-                        <Box sx={{ mt: 2, textAlign: "center" }}>
-                            <img
-                                src={capturedImage}
-                                alt="Captured item"
-                                style={{
-                                    width: "100%",
-                                    maxHeight: "200px",
-                                    objectFit: "contain",
-                                    borderRadius: "4px",
+                            Add New Item
+                            <IconButton
+                                aria-label="close"
+                                onClick={handleClose}
+                                sx={{
+                                    position: "absolute",
+                                    right: 8,
+                                    top: 8,
+                                    color: (theme) => theme.palette.grey[500],
                                 }}
-                            />
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </Typography>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Item Name"
+                            fullWidth
+                            variant="outlined"
+                            value={itemName}
+                            onChange={(e) => {
+                                setItemName(e.target.value);
+                            }}
+                            sx={{ mb: 2 }}
+                        />
+                        <Box sx={{ mb: 2 }}>
+                            <CameraCapture onCapture={handleCapture} />
                         </Box>
-                    )}
-                    <Button
-                        variant="contained"
-                        fullWidth
-                        disabled={isLoading || !itemName.trim()}
-                        onClick={() => {
-                            addItem(itemName);
-                        }}
-                        sx={{ mt: 2 }}
-                        startIcon={
-                            isLoading ? (
-                                <CircularProgress size={24} color="inherit" />
-                            ) : (
-                                <AddIcon />
-                            )
-                        }
-                    >
-                        {isLoading ? "Add..." : "Add Item"}
-                    </Button>
-                </Box>
+                        {capturedImage && (
+                            <Box sx={{ mt: 2, textAlign: "center" }}>
+                                <img
+                                    src={capturedImage}
+                                    alt="Captured item"
+                                    style={{
+                                        width: "100%",
+                                        maxHeight: "200px",
+                                        objectFit: "contain",
+                                        borderRadius: "4px",
+                                    }}
+                                />
+                            </Box>
+                        )}
+                        <Button
+                            variant="contained"
+                            fullWidth
+                            disabled={isLoading || !itemName.trim()}
+                            onClick={() => {
+                                addItem(itemName);
+                            }}
+                            sx={{ mt: 2 }}
+                            startIcon={
+                                isLoading ? (
+                                    <CircularProgress size={24} color="inherit" />
+                                ) : (
+                                    <AddIcon />
+                                )
+                            }
+                        >
+                            {isLoading ? "Add..." : "Add Item"}
+                        </Button>
+                    </Box>
+                </Fade>
             </Modal>
 
             <Snackbar
@@ -426,6 +669,8 @@ export default function Home() {
                     onClose={() => setSnackbar({ ...snackbar, open: false })}
                     severity={snackbar.severity}
                     sx={{ width: "100%" }}
+                    elevation={6}
+                    variant="filled"
                 >
                     {snackbar.message}
                 </Alert>
