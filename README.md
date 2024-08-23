@@ -1,25 +1,43 @@
 # Smart Inventory Management System
 
-A modern, AI-enhanced inventory management system built with Next.js, Firebase, and OpenAI's GPT-4 Vision API.
+A web-based inventory management application built using modern web technologies. It allows users to add, view, and manage inventory items, including capturing images of items and using AI for image classification.
 
-## Features
-
+## Main Features
 - **Real-time Inventory Management**: Add, remove, and update inventory items in real-time.
-- **Image Capture**: Utilize device camera to capture images of inventory items.
-- **AI-Powered Classification**: Automatically classify and describe items using GPT-4 Vision API.
 - **Smart Search**: Quickly find items in your inventory with an intuitive search function.
+- **Image Capture**: Integrated camera functionality to capture item images
+- **AI-Powered Classification**: Automatically classify and describe items using GPT-4 Vision API.
 - **Cloud Storage**: Securely store your inventory data with Firebase Firestore.
 - **Responsive Design**: A clean, user-friendly interface that works on desktop and mobile devices.
 
-## Technologies Used
+## Key Technologies
 
-- Next.js
-- React
-- Firebase (Firestore)
-- Material-UI
-- OpenAI GPT-4 Vision API
+- Frontend: React, Next.js
+- UI Framework: Material-UI (MUI)
+- Backend/Database: Firebase (Firestore)
+- Image Processing: OpenAI API for classification
+- State Management: React Hooks
+- Camera Integration: react-camera-pro
 
-## Getting Started
+## File Structure
+Components `app/components` 
+- `Header.js`: app bar with title and add button
+- `InventoryList.js`: Grid of inventory items
+- `InventoryItem.js`: Individual inventory item card
+- `AddItemModal.js`: Modal for adding new item
+- `SearchBar.js`: Search input field
+- `SnackbarMessage.js`: Snackbar for notifications
+
+Hooks `app/hooks`
+- `useInventory.js`: Custom hook for inventory management logic
+- `userSnackbar.js`: Custom hook for snackbar state management
+
+Utils `app/utils`
+- `firebaseUtils.js`: Firebase-related utility functions
+- `imageUtils.js`: Image processing utility functions
+
+Constants
+- `uiConstants.js`: UI-related constant values
 
 ### Prerequisites
 
