@@ -16,12 +16,16 @@ export const classifyImage = async (imageDataUrl) => {
                         {
                             type: "text",
                             text: `
-                        Analyze this image of an item and identify possible categories for inventory management, provide a JSON object with the following structure: 
+                        Analyze this image of an item and 
+                        identify possible categories for pantry inventory management, 
+                        provide a JSON object with the following structure: 
                             {
                                 "name": "Item name",
-                                "description": "Brief description of the item",
                                 "categories": "[Category1, Category2]",
-                                "estimatedQuantity: "Estimated quantity or unit (e.g., '1 bottle', '500g')"
+                                "unit": "unit of the item"
+                                "ingredients": [Ingredient1, Ingredient2],
+                                "culinaryUses": "suggestion on how to use this in cooking"
+                                "storageInstructions": "how to store this item"
                             }
                         Ensure the response is a valid JSON object. Don't wrap the response in '''json ''', just plain text.
                         `,
@@ -42,6 +46,9 @@ export const classifyImage = async (imageDataUrl) => {
         console.log("Image classication result: ", result);
 
         const parsedResult = JSON.parse(result);
+        parsedResult.categories = Array.isArray(parsedResult.categories)
+            ? parsedResult.categories
+            : [parsedResult.categories];
         console.log("Parsed classification result:", parsedResult);
         return parsedResult;
     } catch (error) {
