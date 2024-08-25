@@ -165,14 +165,6 @@ const InventoryItemCard = forwardRef(({
                         }}
                     >
                          {renderCategories()}
-                    {item.categories.map((category, index) => (
-                            <Chip
-                                key={`${item.id}-category-${index}`}
-                                label={category}
-                                size="small"
-                                sx={{ bgcolor: "#e3f2fd", color: "#1976d2" }}
-                            />
-                        ))} 
                     </Box>
                 )}
 
