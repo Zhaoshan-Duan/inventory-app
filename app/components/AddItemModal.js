@@ -50,6 +50,7 @@ const AddItemModal = ({
         setCapturedImage(null)
         setItemName("")
         setQuantity(1)
+        setIsLoading(false)
         onClose()
     }
 

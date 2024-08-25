@@ -142,7 +142,7 @@ const InventoryItemCard = forwardRef(({
                             }}
                         >
                             <Typography variant="body2" color="text.secondary">
-                                Classified Name: {item.classifiedName}
+                                Detected Name: {item.classifiedName}
                             </Typography>
                             <Button
                                 size="small"
@@ -150,7 +150,7 @@ const InventoryItemCard = forwardRef(({
                                 onClick={() => onAcceptClassifiedName(item)}
                                 sx={{ ml: 2 }}
                             >
-                                Use Classified Name
+                                Use Detected Name
                             </Button>
                         </Box>
                     )}
