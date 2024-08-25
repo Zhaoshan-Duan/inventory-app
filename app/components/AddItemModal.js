@@ -19,7 +19,7 @@ import {
 } from '@mui/icons-material';
 
 import CameraCapture from '../CameraCapture';
-import { classifyImage } from '../imageClassification';
+import { classifyImage } from '../classify-image';
 import { resizeImage } from '../imageUtils';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { firestore } from "@/firebase";

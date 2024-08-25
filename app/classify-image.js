@@ -1,5 +1,3 @@
-import OpenAI from "openai";
-
 export const classifyImage = async (imageDataUrl) => {
     try {
         const response = await fetch('/api/classify-image', {
@@ -9,7 +7,9 @@ export const classifyImage = async (imageDataUrl) => {
             },
             body: JSON.stringify({ imageDataUrl }),
         });
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
         return await response.json();
     } catch (error) {
         console.error("Error classifying image:", error);
