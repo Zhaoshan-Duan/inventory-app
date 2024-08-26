@@ -23,6 +23,7 @@ import { classifyImage } from '../classify-image';
 import { resizeImage } from '../imageUtils';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { firestore } from "@/firebase";
+import MySnackbar from './MySnackbar';
 
 const AddItemModal = ({
     open,
@@ -52,6 +53,10 @@ const AddItemModal = ({
         setQuantity(1)
         setIsLoading(false)
         onClose()
+    }
+
+    const handleSnackbarClose = () => {
+        setSnackbar({ ...snackbar, open: false });
     }
 
     const addItem = async () => {
@@ -105,7 +110,7 @@ const AddItemModal = ({
 
                 setSnackbar({
                     open: true,
-                    message: "Item added successfully",
+                    message: `${itemName} added successfully`,
                     severity: "success",
                 })
 
@@ -116,7 +121,7 @@ const AddItemModal = ({
                 console.error("Error adding item:", error);
                 setSnackbar({
                     open: true,
-                    message: `Error adding item: ${error.message}`,
+                    message: `Failed to add ${itemName}. ${error.message || 'Please Try Again.'}`,
                     severity: "error",
                 });
             } finally {
@@ -124,6 +129,8 @@ const AddItemModal = ({
                 console.log(newItemData)
             }
         }
+
+
     }
 
     return (
@@ -210,22 +217,13 @@ const AddItemModal = ({
                     </Box>
                 </Fade>
             </Modal>
-            <Snackbar
+            <MySnackbar
                 open={snackbar.open}
-                autoHideDuration={6000}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-            >
-                <Alert
-                    onClose={() => setSnackbar({ ...snackbar, open: false })}
-                    severity={snackbar.severity}
-                    sx={{ width: "100%" }}
-                    elevation={6}
-                    variant="filled"
-                >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+                message={snackbar.message}
+                severity={snackbar.severity}
+                onClose={handleSnackbarClose}
+            />
+
         </>
     )
 }
