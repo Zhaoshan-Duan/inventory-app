@@ -129,8 +129,6 @@ const AddItemModal = ({
                 console.log(newItemData)
             }
         }
-
-
     }
 
     return (

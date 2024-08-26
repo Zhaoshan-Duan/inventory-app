@@ -5,8 +5,8 @@ A web-based inventory management application built using modern web technologies
 ## Main Features
 - **Real-time Inventory Management**: Add, remove, and update inventory items in real-time.
 - **Smart Search**: Quickly find items in your inventory with an intuitive search function.
-- **Image Capture**: Integrated camera functionality to capture item images
-- **AI-Powered Classification**: Automatically classify and describe items using GPT-4 Vision API.
+- **Image Capture**: Integrated camera functionality to capture item images.
+- **AI-Powered Classification**: Automatically classify and describe items using GPT-4o.
 - **Cloud Storage**: Securely store your inventory data with Firebase Firestore.
 - **Responsive Design**: A clean, user-friendly interface that works on desktop and mobile devices.
 
@@ -26,18 +26,17 @@ Components `app/components`
 - `InventoryItem.js`: Individual inventory item card
 - `AddItemModal.js`: Modal for adding new item
 - `SearchBar.js`: Search input field
-- `SnackbarMessage.js`: Snackbar for notifications
+- `MySnackbar.js`: Snackbar for notifications
+- `CameraCapture.js`: Component for capturing images
 
-Hooks `app/hooks`
-- `useInventory.js`: Custom hook for inventory management logic
-- `userSnackbar.js`: Custom hook for snackbar state management
-
-Utils `app/utils`
-- `firebaseUtils.js`: Firebase-related utility functions
 - `imageUtils.js`: Image processing utility functions
 
-Constants
-- `uiConstants.js`: UI-related constant values
+## AI-Powered Features
+The system usesu OpenAI's GPT-4o to analyze captured images and provide intelligent suggestions:
+- **Item Name Recognition**: automatically suggests item names based on the image.
+- **Category Classifications**: assigns relevant categories to items.
+- **Usage SUggestions**: provides culinary uses for for items.
+- **Storage Instructions**: offers guidance on how to store the item
 
 ### Prerequisites
 
@@ -67,7 +66,7 @@ Constants
    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
    NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
-   NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key
+   OPENAI_API_KEY=your_openai_api_key
    ```
 
 4. Run the development server:
@@ -84,8 +83,3 @@ Constants
 - The system will automatically classify and describe the item using AI.
 - Search for items using the search bar.
 - Manage item quantities using the + and - buttons on each item card.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
