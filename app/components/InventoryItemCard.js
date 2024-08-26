@@ -147,7 +147,7 @@ const InventoryItemCard = forwardRef(({
                             <Button
                                 size="small"
                                 variant="outlined"
-                                onClick={() => onAcceptClassifiedName(item)}
+                                onClick={() => onAcceptClassifiedName(item.id, item.classifiedName)}
                                 sx={{ ml: 2 }}
                             >
                                 Use Detected Name
