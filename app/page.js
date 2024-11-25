@@ -1,154 +1,93 @@
 "use client";
-import { useState, useEffect, useMemo} from "react";
-import { firestore } from "@/app/shared/utils/firebase";
+import { useState } from "react";
 import {
     Box,
     Container,
 } from "@mui/material";
-
-import {
-    collection,
-    doc,
-    getDocs,
-    runTransaction,
-    updateDoc,
-    serverTimestamp,
-} from "firebase/firestore";
 
 import Component_Header from "@/app/shared/components/component_Header";
 import Component_SearchBar from "@/app/shared/components/component_SearchBar";
 import Component_InventoryList from "@/app/features/inventory/components/InventoryList/component_InventoryList";
 import Component_AddItemModal from "@/app/features/inventory/components/AddItemModal/component_AddItemModal";
 import Component_MySnackbar from "@/app/shared/components/component_MySnackbar";
+import { useInventory } from "@/app/features/inventory/hooks/useInventory";
 
 export default function Home() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const handleOpenModal = () => setIsModalOpen(true);
-    const handleCloseModal = () => setIsModalOpen(false);
-
-    const [searchTerm, setSearchTerm] = useState("");
-    const handleSearch = (term) => setSearchTerm(term);
-
-    const [inventory, setInventory] = useState([]);
-    const handleItemAdded = (newItem) => {
-        setInventory(prevInventory => [...prevInventory, newItem]);
-    };
-
     const [snackbar, setSnackbar] = useState({
         open: false,
         message: "",
         severity: "success",
-      });
+    });
+
+    const {
+        inventory,
+        isLoading,
+        error,
+        setSearchTerm,
+        addItem,
+        updateItemName,
+        updateQuantity
+    } = useInventory();
+
+    const handleOpenModal = () => setIsModalOpen(true);
+    const handleCloseModal = () => setIsModalOpen(false);
     const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false });
-      
-    const fetchInventory = async () => {
-        try {
-            const itemsRef = collection(firestore, 'inventory');
-            const snapshot = await getDocs(itemsRef);
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setInventory(items);
-        } catch (error) {
-            console.error("Error fetching inventory:", error);
-        }
-    }
 
-    useEffect(() => {
-        fetchInventory();
-    }, []);
-
-    const filteredInventory = useMemo(() => {
-        return inventory.filter((item) =>
-            item.userEnteredName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [inventory, searchTerm]);
-
-    const acceptClassifiedName = async (itemId, classifiedName) => {
-        try {
-            // Update local state
-            const updatedItems = inventory.map(item => 
-                item.id === itemId ? {...item, userEnteredName: classifiedName} : item
-            );
-            setInventory(updatedItems);
-    
-            // Update Firestore
-            const itemRef = doc(firestore, 'inventory', itemId);
-            await updateDoc(itemRef, {
-                userEnteredName: classifiedName,
-                lastUpdated: serverTimestamp()
-            });
-
+    const handleItemAdded = async (newItemData) => {
+        const result = await addItem(newItemData);
+        if (result.success) {
             setSnackbar({
                 open: true,
-                message: `Item name updated to "${classifiedName}" successfully`,
+                message: `${newItemData.userEnteredName} added successfully`,
                 severity: "success",
-              });
-        } catch (error) {
-            console.error("Error updating item name:", error);
+            });
+            handleCloseModal();
+        } else {
             setSnackbar({
                 open: true,
-                message: `Failed to update item name. ${error.message || 'Please try again.'}`,
+                message: `Failed to add item: ${result.error}`,
                 severity: "error",
-              });  
-        }
-    };
-
-    const updateQuantity = async (itemId, change) => {
-        const itemRef = doc(firestore, "inventory", itemId);
-
-        try {
-            await runTransaction(firestore, async (transaction) => {
-                const itemDoc = await transaction.get(itemRef);
-                if (!itemDoc.exists()) {
-                    throw "Document does not exist!";
-                }
-
-                const currentQuantity = itemDoc.data().quantity;
-                const newQuantity = currentQuantity + change;
-
-                if (newQuantity > 0) {
-                    transaction.update(itemRef, { quantity: newQuantity });
-
-                    // Update local state
-                    setInventory((prevInventory) =>
-                        prevInventory.map((item) =>
-                            item.id === itemId ? { ...item, quantity: newQuantity } : item
-                        )
-                    );
-                } else {
-                    // If quantity would become 0 or negative, delete the document
-                    transaction.delete(itemRef);
-
-                    // Remove item from local state
-                    setInventory((prevInventory) =>
-                        prevInventory.filter((item) => item.id !== itemId)
-                    );
-                }
             });
-
-            console.log("Quantity updated successfully");
-        } catch (error) {
-            console.error("Error updating quantity: ", error);
-            // Handle error (e.g., show error message to user)
         }
     };
+
+    const handleAcceptClassifiedName = async (itemId, classifiedName) => {
+        const result = await updateItemName(itemId, classifiedName);
+        setSnackbar({
+            open: true,
+            message: result.success
+                ? `Item name updated to "${classifiedName}" successfully`
+                : `Failed to update item name: ${result.error}`,
+            severity: result.success ? "success" : "error",
+        });
+    };
+
+    if (error) {
+        setSnackbar({
+            open: true,
+            message: `Error: ${error}`,
+            severity: "error",
+        });
+    }
 
     return (
         <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
             <Component_Header onAddClick={handleOpenModal} />
             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                <Component_SearchBar onSearch ={handleSearch}/>
+                <Component_SearchBar onSearch={setSearchTerm} />
 
                 <Component_InventoryList
-                    items={filteredInventory}
-                    onUpdateQuantity = {updateQuantity}
-                    onAcceptClassifiedName={acceptClassifiedName}
+                    items={inventory}
+                    onUpdateQuantity={updateQuantity}
+                    onAcceptClassifiedName={handleAcceptClassifiedName}
                 />
             </Container>
 
             <Component_AddItemModal
                 open={isModalOpen}
                 onItemAdded={handleItemAdded}
-                onClose = {handleCloseModal}
+                onClose={handleCloseModal}
             />
             <Component_MySnackbar
                 open={snackbar.open}

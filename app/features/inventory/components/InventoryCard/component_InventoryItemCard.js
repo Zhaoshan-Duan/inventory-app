@@ -36,6 +36,25 @@ const QuantityDisplay = styled(Box)(({ theme }) => ({
     boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
 }));
 
+// Helper function to safely format Firestore timestamp
+const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'N/A';
+
+    // Handle both server timestamp and client timestamp cases
+    if (timestamp.seconds) {
+        // Server timestamp case
+        return new Date(timestamp.seconds * 1000).toLocaleDateString();
+    } else if (timestamp.toDate) {
+        // Firestore Timestamp case
+        return timestamp.toDate().toLocaleDateString();
+    } else if (timestamp instanceof Date) {
+        // Regular Date object case
+        return timestamp.toLocaleDateString();
+    }
+
+    return 'Invalid date';
+};
+
 const Component_InventoryItemCard = forwardRef(({
     item,
     onUpdateQuantity,
@@ -212,7 +231,7 @@ const Component_InventoryItemCard = forwardRef(({
                             <ListItem key={`${item.id}-date-added`}>
                                 <ListItemText
                                     primary="Date Added"
-                                    secondary={new Date(item.dateAdded.seconds * 1000).toLocaleDateString()}
+                                    secondary={formatTimestamp(item.dateAdded)}
                                 />
                             </ListItem>
                         )}
@@ -220,7 +239,7 @@ const Component_InventoryItemCard = forwardRef(({
                             <ListItem key={`${item.id}-last-updated`}>
                                 <ListItemText
                                     primary="Last Updated"
-                                    secondary={new Date(item.lastUpdated.seconds * 1000).toLocaleDateString()}
+                                    secondary={formatTimestamp(item.lastUpdated)}
                                 />
                             </ListItem>
                         )}
