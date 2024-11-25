@@ -36,11 +36,11 @@ const QuantityDisplay = styled(Box)(({ theme }) => ({
     boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
 }));
 
-const InventoryItemCard = forwardRef(({
+const Component_InventoryItemCard = forwardRef(({
     item,
     onUpdateQuantity,
     onAcceptClassifiedName }, ref) => {
-        console.log("Item received in InventoryItemCard:", item);
+        console.log("Item received in Component_InventoryItemCard:", item);
 
 
     const [expanded, setExpanded] = useState(false)
@@ -248,6 +248,6 @@ const InventoryItemCard = forwardRef(({
     )
 })
 
-InventoryItemCard.displayName = 'InventoryItemCard'
+Component_InventoryItemCard.displayName = 'Component_InventoryItemCard'
 
-export default InventoryItemCard
+export default Component_InventoryItemCard

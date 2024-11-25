@@ -1,6 +1,6 @@
 import { Snackbar, Alert } from '@mui/material';
 
-const MySnackbar = ({ open, message, severity, onClose }) => {
+const Component_MySnackbar = ({ open, message, severity, onClose }) => {
     return (
         <Snackbar
             open={open}
@@ -21,4 +21,4 @@ const MySnackbar = ({ open, message, severity, onClose }) => {
     )
 }
 
-export default MySnackbar;
+export default Component_MySnackbar;

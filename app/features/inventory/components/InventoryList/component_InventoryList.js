@@ -1,7 +1,7 @@
 import { Fade, Grid } from '@mui/material'
-import InventoryItem from "./InventoryItemCard";
+import InventoryItem from "../InventoryCard/component_InventoryItemCard";
 
-const InventoryList = (
+const Component_InventoryList = (
     { items,
         onUpdateQuantity,
         onAcceptClassifiedName }
@@ -27,4 +27,4 @@ const InventoryList = (
     )
 }
 
-export default InventoryList
+export default Component_InventoryList

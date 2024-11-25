@@ -1,7 +1,7 @@
 import { AppBar, Toolbar, Typography, Button } from '@mui/material'
 import { Add as AddIcon } from '@mui/icons-material'
 
-export default function Header({ onAddClick }) {
+export default function Component_Header({ onAddClick }) {
     return (
         <AppBar position="static" sx={{ bgcolor: "#1976d2" }}>
             <Toolbar>

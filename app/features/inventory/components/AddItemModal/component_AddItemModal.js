@@ -18,14 +18,14 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 
-import CameraCapture from '../CameraCapture';
-import { classifyImage } from '../classify-image';
-import { resizeImage } from '../imageUtils';
+import CameraCapture from '../../../image/components/ImageCapture/CameraCapture';
+import { imageClassification } from '../../../image/services/imageClassification';
+import { resizeImage } from '../../../../imageUtils';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { firestore } from "@/firebase";
-import MySnackbar from './MySnackbar';
+import { firestore } from "@/app/shared/utils/firebase";
+import Component_MySnackbar from '../../../../shared/components/component_MySnackbar';
 
-const AddItemModal = ({
+const Component_AddItemModal = ({
     open,
     onItemAdded,
     onClose,
@@ -78,7 +78,7 @@ const AddItemModal = ({
                 newItemData.imageUrl = resizedImage;
 
                 console.log("Starting image classification...");
-                const classification = await classifyImage(resizedImage);
+                const classification = await imageClassification(resizedImage);
 
                 newItemData = {
                     ...newItemData,
@@ -131,6 +131,8 @@ const AddItemModal = ({
         }
     }
 
+    const isFormValid = itemName.trim() !== "" && capturedImage !== null;
+
     return (
         <>
             <Modal open={open} onClose={handleClose}>
@@ -178,11 +180,13 @@ const AddItemModal = ({
                                 setItemName(e.target.value);
                             }}
                             sx={{ mb: 2 }}
+                            error={itemName.trim() === ""}
+                            helperText={itemName.trim() === "" ? "Item name is required" : ""}
                         />
                         <Box sx={{ mb: 2 }}>
                             <CameraCapture onCapture={handleCapture} />
                         </Box>
-                        {capturedImage && (
+                        {capturedImage ? (
                             <Box sx={{ mt: 2, textAlign: "center" }}>
                                 <img
                                     src={capturedImage}
@@ -195,13 +199,20 @@ const AddItemModal = ({
                                     }}
                                 />
                             </Box>
+                        ) : (
+                            <Alert severity="info" sx={{ mt: 2 }}>
+                                Please capture an image of the item
+                            </Alert>
                         )}
                         <Button
                             variant="contained"
                             fullWidth
-                            disabled={isLoading || !itemName.trim()}
+                            disabled={isLoading || !isFormValid}
                             onClick={addItem}
-                            sx={{ mt: 2 }}
+                            sx={{
+                                mt: 2,
+                                opacity: isFormValid ? 1 : 0.7
+                            }}
                             startIcon={
                                 isLoading ? (
                                     <CircularProgress size={24} color="inherit" />
@@ -210,12 +221,29 @@ const AddItemModal = ({
                                 )
                             }
                         >
-                            {isLoading ? "Add..." : "Add Item"}
+                            {isLoading ? "Add..." :
+                                !itemName.trim() ? "Enter Item Name" :
+                                    !capturedImage ? "Capture Image" : "Add Item"}
                         </Button>
+                        {!isFormValid && (
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                    display: 'block',
+                                    textAlign: 'center',
+                                    mt: 1
+                                }}
+                            >
+                                {!itemName.trim() && !capturedImage ? "Enter item name and capture image to continue" :
+                                    !itemName.trim() ? "Enter item name to continue" :
+                                        !capturedImage ? "Capture image to continue" : ""}
+                            </Typography>
+                        )}
                     </Box>
                 </Fade>
             </Modal>
-            <MySnackbar
+            <Component_MySnackbar
                 open={snackbar.open}
                 message={snackbar.message}
                 severity={snackbar.severity}
@@ -226,4 +254,4 @@ const AddItemModal = ({
     )
 }
 
-export default AddItemModal
+export default Component_AddItemModal

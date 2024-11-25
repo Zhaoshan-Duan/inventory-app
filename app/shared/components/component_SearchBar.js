@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TextField, InputAdornment, Paper } from '@mui/material'
 import { Search as SearchIcon } from '@mui/icons-material'
 
-const SearchBar = ({ onSearch }) => {
+const Component_SearchBar = ({ onSearch }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
     const handleSearchChange = (e) => {
@@ -40,4 +40,4 @@ const SearchBar = ({ onSearch }) => {
     )
 }
 
-export default SearchBar;
+export default Component_SearchBar;

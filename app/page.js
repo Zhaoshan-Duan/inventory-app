@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo} from "react";
-import { firestore } from "@/firebase";
+import { firestore } from "@/app/shared/utils/firebase";
 import {
     Box,
     Container,
@@ -15,11 +15,11 @@ import {
     serverTimestamp,
 } from "firebase/firestore";
 
-import Header from "./components/Header";
-import SearchBar from "./components/SearchBar";
-import InventoryList from "./components/InventoryList";
-import AddItemModal from "./components/AddItemModal";
-import MySnackbar from "./components/MySnackbar";
+import Component_Header from "@/app/shared/components/component_Header";
+import Component_SearchBar from "@/app/shared/components/component_SearchBar";
+import Component_InventoryList from "@/app/features/inventory/components/InventoryList/component_InventoryList";
+import Component_AddItemModal from "@/app/features/inventory/components/AddItemModal/component_AddItemModal";
+import Component_MySnackbar from "@/app/shared/components/component_MySnackbar";
 
 export default function Home() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -134,23 +134,23 @@ export default function Home() {
 
     return (
         <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
-            <Header onAddClick={handleOpenModal} />
+            <Component_Header onAddClick={handleOpenModal} />
             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                <SearchBar onSearch ={handleSearch}/>
+                <Component_SearchBar onSearch ={handleSearch}/>
 
-                <InventoryList
+                <Component_InventoryList
                     items={filteredInventory}
                     onUpdateQuantity = {updateQuantity}
                     onAcceptClassifiedName={acceptClassifiedName}
                 />
             </Container>
 
-            <AddItemModal
+            <Component_AddItemModal
                 open={isModalOpen}
                 onItemAdded={handleItemAdded}
                 onClose = {handleCloseModal}
             />
-            <MySnackbar
+            <Component_MySnackbar
                 open={snackbar.open}
                 message={snackbar.message}
                 severity={snackbar.severity}

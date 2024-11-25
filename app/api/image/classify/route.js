@@ -16,9 +16,7 @@ export async function POST(request) {
                     content: [
                         {
                             type: "text",
-                            text: `Analyze this image of an item and 
-                            identify possible categories for pantry inventory management, 
-                            provide a JSON object with the following structure: 
+                            text: `Analyze this image and provide a JSON object with the following structure: 
                                 {
                                     "name": "Item name",
                                     "categories": "[Category1, Category2]",

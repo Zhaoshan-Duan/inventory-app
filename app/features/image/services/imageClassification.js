@@ -1,6 +1,13 @@
-export const classifyImage = async (imageDataUrl) => {
+export const imageClassification = async (imageDataUrl) => {
     try {
-        const response = await fetch('/api/classify-image', {
+        console.log("Starting image classification...");
+
+        // Add a basic check for the imageDataUrl
+        if (!imageDataUrl || !imageDataUrl.startsWith('data:image')) {
+            throw new Error('Invalid image data');
+        }
+
+        const response = await fetch('/api/image/classify', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -8,6 +15,7 @@ export const classifyImage = async (imageDataUrl) => {
             body: JSON.stringify({ imageDataUrl }),
         });
         if (!response.ok) {
+            console.error('Server responded with status:', response.status)
             throw new Error('Network response was not ok');
         }
         return await response.json();

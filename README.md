@@ -18,15 +18,16 @@ A web-based inventory management application built using modern web technologies
 - Image Processing: OpenAI API for classification
 - State Management: React Hooks
 - Camera Integration: react-camera-pro
+- Architecture: *Feature-First*
 
 ## File Structure
 Components `app/components` 
-- `Header.js`: app bar with title and add button
-- `InventoryList.js`: Grid of inventory items
+- `Component_Header.js`: app bar with title and add button
+- `component_InventoryList.js`: Grid of inventory items
 - `InventoryItem.js`: Individual inventory item card
-- `AddItemModal.js`: Modal for adding new item
-- `SearchBar.js`: Search input field
-- `MySnackbar.js`: Snackbar for notifications
+- `component_AddItemModal.js`: Modal for adding new item
+- `component_SearchBar.js`: Search input field
+- `component_MySnackbar.js`: Snackbar for notifications
 - `CameraCapture.js`: Component for capturing images
 
 - `imageUtils.js`: Image processing utility functions
